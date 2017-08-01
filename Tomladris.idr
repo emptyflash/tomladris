@@ -48,7 +48,7 @@ parseTString = (TString) <$> (quoted '\'' <|> quoted '\"')
 --else we get infinite loop
 mutual
   parseTArray : Parser TomlValue
-  parseTArray = TArray <$> (spaces *> (char '[') *>| parsePrimitives <*| (char ']'))
+  parseTArray = TArray <$> (char '[' *> parsePrimitives <* char ']' <* spaces)
   
   parsePrimitives : Parser (List TomlValue)
   parsePrimitives = spaces *> (sepBy1 parseNumber (char ',')) <|>|
@@ -58,7 +58,7 @@ mutual
 
 
 parseTableName : Parser TomlValue
-parseTableName = (TString .pack) <$> ((many endOfLine) *> spaces *> (char '[') *>| (many (noneOf "]"))  <*| (char ']'))
+parseTableName = (TString . pack) <$> (char '[' *>| many (noneOf "]")  <*| char ']')
 
 
 parseTKeyVal : Parser TomlValue
@@ -70,9 +70,7 @@ parseTKeyVal = (TTableKV) <$>
                              parseTBoolean <|> 
                              parseNumber))
   where
-    parseString = (TString . pack) <$> 
-                  (((many endOfLine) *> spaces *> many (noneOf " [=")) <|> 
-                  (spaces *> many (noneOf " [=")))
+    parseString = (TString . pack) <$> (many (noneOf " [=") <* spaces)
 
 
 keyMap : (List TomlValue) -> SortedMap String TomlValue
