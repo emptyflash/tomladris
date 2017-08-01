@@ -6,6 +6,7 @@ import public Lightyear
 import public Lightyear.Char
 import public Lightyear.Strings
 
+%access public export
 
 data TomlValue =   TComment String
                  | TString String
@@ -16,7 +17,6 @@ data TomlValue =   TComment String
                  | TTableKV TomlValue TomlValue
 
 
-private
 parseComment : Parser TomlValue
 parseComment = TComment . pack <$> (char '#' *> many (noneOf "\n"))
     
@@ -95,8 +95,7 @@ foldOver root [] m = m
 foldOver root ((TString table)::xs) m = foldOver table xs m
 foldOver root ((TTableKV (TString key) value)::xs) m = foldOver root xs (addKeyVal root key value m)  
 
-
-public                       
+                       
 parseToml : String  -> SortedMap String TomlValue
 parseToml s = case parse (many (parseTableName <|> parseTKeyVal)) s of
               (Right lstToml) => foldOver "" lstToml empty 
