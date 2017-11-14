@@ -36,24 +36,24 @@ withToml ty desc f val = fail $ "expected " ++ desc
 interface FromToml a where
   parseToml : TomlValue -> Parser a
 
-FromToml String where
+implementation FromToml String where
   parseToml = withToml TomlString "a string" pure
 
-FromToml Integer where
+implementation FromToml Integer where
   parseToml = withToml TomlInteger "a integer" pure
 
-FromToml Bool where
+implementation FromToml Bool where
   parseToml = withToml TomlBoolean "a boolean" pure
 
-FromToml Double where
+implementation FromToml Double where
   parseToml = withToml TomlDouble "a double" pure
 
-FromToml a => FromToml (List a) where
+implementation FromToml a => FromToml (List a) where
   parseToml = withToml TomlArray "an array" $ traverse parseToml
 
 
 
-FromToml a => FromToml (SM.SortedMap String a) where
+implementation FromToml a => FromToml (SM.SortedMap String a) where
   parseToml = withToml TomlTable "a table" parseTomlTable
   where 
     parseTomlTuple : (String, TomlValue) -> Parser (String, a)
@@ -67,13 +67,4 @@ FromToml a => FromToml (SM.SortedMap String a) where
 
 interface ToToml a where
   toToml : a -> TomlValue
-
-Show TomlValue where
-  show (TComment x) = ?lmao_1
-  show (TString x) = ?lmao_2
-  show (TInteger x) = ?lmao_3
-  show (TDouble x) = ?lmao_4
-  show (TBoolean x) = ?lmao_5
-  show (TArray xs) = ?lmao_6
-  show (TTable x) = ?lmao_7
 

@@ -90,3 +90,23 @@ mutual
     namedTables <- many parseNamedTable
     eof
     pure $ TTable $ mergeLeft (SM.fromList namedTables) topTable
+
+joinWith : String -> List String -> String
+joinWith sep = foldl (++) "" . intersperse sep
+
+mutual
+  showPair : (String, TomlValue) -> String
+  showPair (key, (TTable t)) = "[" ++ key ++ "]\n" ++ showTable t
+  showPair (key, val) = key ++ " = " ++ show val
+
+  showTable : Table -> String
+  showTable t = joinWith "\n" $ map showPair $ SM.toList t
+
+  implementation Show TomlValue where
+    show (TComment x) = "# " ++ show x
+    show (TString x) = show x
+    show (TInteger x) = show x
+    show (TDouble x) = show x
+    show (TBoolean x) = show x
+    show (TArray xs) = "[" ++ (joinWith ", " $ map show xs) ++ "]"
+    show (TTable x) = showTable x
