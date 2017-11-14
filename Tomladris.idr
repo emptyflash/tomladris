@@ -1,25 +1,27 @@
 module Tomladris
 
 import public Data.String
-import public Data.SortedMap
+import public Data.SortedMap as SM
 import public Lightyear
 import public Lightyear.Char
 import public Lightyear.Strings
 
 %access public export
 
-data TomlValue =   TComment String
+mutual 
+  Table : Type
+  Table = SM.SortedMap String TomlValue
+
+  data TomlValue = TComment String
                  | TString String
                  | TInteger Integer
                  | TDouble Double
                  | TBoolean Bool
                  | TArray (List TomlValue)
-                 | TTableKV TomlValue TomlValue
-
+                 | TTable Table
 
 parseComment : Parser TomlValue
 parseComment = TComment . pack <$> (char '#' *> many (noneOf "\n"))
-    
 
 parseNumber : Parser TomlValue
 parseNumber = (parseNum . pack) <$> many (oneOf "1234567890.eE+-")
@@ -56,45 +58,35 @@ mutual
                     (sepBy1 parseTString (char ',')) <|>|
                     (sepBy1 parseTArray (char ','))
 
+  parseEntry : Parser (String, TomlValue)
+  parseEntry = do
+    k <- pack <$> (many (noneOf " [=") <* spaces)
+    v <- (char '=' *> spaces *> parseTomlValue)
+    pure (k, v)
 
-parseTableName : Parser TomlValue
-parseTableName = (TString . pack) <$> (char '[' *>| many (noneOf "]")  <*| char ']')
+  parseTable : Parser Table
+  parseTable = do
+    entries <- many parseEntry
+    pure $ SM.fromList entries
 
+  parseTableHeader : Parser String
+  parseTableHeader = pack <$> (char '[' *>| many (noneOf "]")  <*| char ']')
 
-parseTKeyVal : Parser TomlValue
-parseTKeyVal = (TTableKV) <$> 
-               (parseTString <|> parseString) <*> 
-               (char '=' *> 
-               spaces *> (parseTString <|> 
-                             parseTArray <|> 
-                             parseTBoolean <|> 
-                             parseNumber))
-  where
-    parseString = (TString . pack) <$> (many (noneOf " [=") <* spaces)
+  parseNamedTable : Parser (String, TomlValue)
+  parseNamedTable = do
+    header <- parseTableHeader
+    spaces
+    table <- parseTable
+    spaces
+    pure (header, TTable table)
 
+  parseTomlValue : Parser TomlValue
+  parseTomlValue = (parseTString <|> parseTArray <|> parseTBoolean <|> parseNumber)
 
-keyMap : (List TomlValue) -> SortedMap String TomlValue
-keyMap [] = empty
-keyMap (x::xs) = keyMapAux x xs empty
-  where
-    keyMapAux : TomlValue -> (List TomlValue) -> SortedMap String TomlValue -> SortedMap String TomlValue
-    keyMapAux root [] m = m
-    keyMapAux root@(TString r) ((TTableKV (TString key) value)::xs) m = keyMapAux root xs (insert (r ++ "." ++ key) value m)
-
-
-addKeyVal : String -> String -> TomlValue -> SortedMap String TomlValue -> SortedMap String TomlValue
-addKeyVal root key value m = if (length root == 0)
-                             then insert key value m
-                             else insert (root ++ "." ++ key) value m
-
-
-foldOver : String -> (List TomlValue) -> SortedMap String TomlValue -> SortedMap String TomlValue
-foldOver root [] m = m
-foldOver root ((TString table)::xs) m = foldOver table xs m
-foldOver root ((TTableKV (TString key) value)::xs) m = foldOver root xs (addKeyVal root key value m)  
-
-                       
-parseToml : String  -> SortedMap String TomlValue
-parseToml s = case parse (many (parseTableName <|> parseTKeyVal)) s of
-              (Right lstToml) => foldOver "" lstToml empty 
-              (Left _) => empty
+  parseToml : Parser TomlValue
+  parseToml = do
+    spaces
+    topTable <- parseTable
+    namedTables <- many parseNamedTable
+    eof
+    pure $ TTable $ mergeLeft (SM.fromList namedTables) topTable

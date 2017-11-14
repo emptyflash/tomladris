@@ -1,0 +1,9 @@
+name = "tomladris"
+version = "1.0.0"
+description = "TOML parser for Idris"
+
+main = "Tomladris"
+opts = "-p effects -p contrib"
+
+[dependencies]
+ziman/lightyear = "dbcd847ed7a9e62fa0b502b3d89cca43a96f256c"
