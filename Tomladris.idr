@@ -91,6 +91,9 @@ mutual
     eof
     pure $ TTable $ mergeLeft (SM.fromList namedTables) topTable
 
+parseTomlString : String -> Either String TomlValue
+parseTomlString s = parse parseToml s
+
 joinWith : String -> List String -> String
 joinWith sep = foldl (++) "" . intersperse sep
 
